@@ -1,9 +1,11 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from news_fetcher import fetch_shipping_news, fetch_lng_news, fetch_oil_news
 from config import CACHE_TTL_SECONDS, REFRESH_INTERVAL_MINUTES
+
+KST = timezone(timedelta(hours=9))
 
 st.set_page_config(page_title="해운·에너지 대시보드", page_icon=":ship:", layout="wide")
 
@@ -18,11 +20,10 @@ def load_news():
     return fetch_shipping_news(), fetch_lng_news(), fetch_oil_news()
 
 st.title("🚢 해운·에너지 뉴스 대시보드")
-st.caption(f"📅 {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')} 기준 | ⏰ {REFRESH_INTERVAL_MINUTES}분 자동 갱신")
+st.caption(f"📅 {datetime.now(KST).strftime('%Y년 %m월 %d일 %H:%M')} 기준 | ⏰ {REFRESH_INTERVAL_MINUTES}분 자동 갱신")
 
 with st.spinner("📡 최신 데이터를 불러오는 중..."):
     shipping_news, lng_news, oil_news = load_news()
-
 
 tab1, tab2, tab3, tab4 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ 국제유가", "🔥 LNG"])
 
