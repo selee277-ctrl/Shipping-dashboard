@@ -1,125 +1,102 @@
-import feedparser
-import urllib.parse
-from datetime import datetime
-from time import mktime
-from difflib import SequenceMatcher
+import streamlit as st
+from datetime import datetime, timezone, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from news_fetcher import fetch_shipping_news, fetch_lng_news, fetch_oil_news, fetch_tradewinds_news
+from config import CACHE_TTL_SECONDS, REFRESH_INTERVAL_MINUTES
 
-def fetch_google_news(query, num_results=10):
-    encoded_query = urllib.parse.quote(query)
-    url = f"https://news.google.com/rss/search?q={encoded_query}&hl=ko&gl=KR&ceid=KR:ko"
-    feed = feedparser.parse(url)
-    articles = []
-    for entry in feed.entries[:num_results]:
-        pub_parsed = entry.get("published_parsed")
-        if pub_parsed:
-            pub_dt_str = datetime.fromtimestamp(mktime(pub_parsed)).strftime("%Y%m%d%H%M%S")
-        else:
-            pub_dt_str = "00000000000000"
+KST = timezone(timedelta(hours=9))
 
-        articles.append({
-            "title": entry.get("title", ""),
-            "link": entry.get("link", ""),
-            "published": entry.get("published", ""),
-            "sort_key": pub_dt_str,
-            "source": entry.get("source", {}).get("title", ""),
-        })
-    return articles
+st.set_page_config(page_title="해운·에너지 대시보드", page_icon=":ship:", layout="wide")
 
-def fetch_google_news_en(query, num_results=10):
-    encoded_query = urllib.parse.quote(query)
-    url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en&gl=US&ceid=US:en"
-    feed = feedparser.parse(url)
-    articles = []
-    for entry in feed.entries[:num_results]:
-        pub_parsed = entry.get("published_parsed")
-        if pub_parsed:
-            pub_dt_str = datetime.fromtimestamp(mktime(pub_parsed)).strftime("%Y%m%d%H%M%S")
-        else:
-            pub_dt_str = "00000000000000"
+if "scheduler_started" not in st.session_state:
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(lambda: st.cache_data.clear(), trigger=IntervalTrigger(minutes=REFRESH_INTERVAL_MINUTES), id="auto_refresh")
+    scheduler.start()
+    st.session_state.scheduler_started = True
 
-        articles.append({
-            "title": entry.get("title", ""),
-            "link": entry.get("link", ""),
-            "published": entry.get("published", ""),
-            "sort_key": pub_dt_str,
-            "source": entry.get("source", {}).get("title", ""),
-        })
-    return articles
+@st.cache_data(ttl=CACHE_TTL_SECONDS)
+def load_news():
+    return fetch_shipping_news(), fetch_lng_news(), fetch_oil_news(), fetch_tradewinds_news()
 
-def _is_similar(title1, title2, threshold=0.45):
-    """두 제목이 유사한지 판단"""
-    t1 = title1.split(" - ")[0].strip()
-    t2 = title2.split(" - ")[0].strip()
-    return SequenceMatcher(None, t1, t2).ratio() > threshold
+st.title("🚢 해운·에너지 뉴스 대시보드")
+st.caption(f"📅 {datetime.now(KST).strftime('%Y년 %m월 %d일 %H:%M')} 기준 | ⏰ {REFRESH_INTERVAL_MINUTES}분 자동 갱신")
 
-def _filter_articles(articles, exclude_keywords=None):
-    """제외 키워드가 제목에 포함된 기사를 필터링"""
-    if not exclude_keywords:
-        return articles
-    filtered = []
-    for a in articles:
-        title = a["title"]
-        if not any(kw in title for kw in exclude_keywords):
-            filtered.append(a)
-    return filtered
+with st.spinner("📡 최신 데이터를 불러오는 중..."):
+    shipping_news, lng_news, oil_news, tradewinds_news = load_news()
 
-def _deduplicate(articles, max_count=15):
-    seen_titles = []
-    unique = []
-    for a in articles:
-        if a["title"] in seen_titles:
-            continue
-        is_dup = False
-        for existing_title in seen_titles:
-            if _is_similar(a["title"], existing_title):
-                is_dup = True
-                break
-        if not is_dup:
-            seen_titles.append(a["title"])
-            unique.append(a)
-    unique.sort(key=lambda x: x["sort_key"], reverse=True)
-    return unique[:max_count]
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ 국제유가", "🔥 LNG", "🌊 TradeWinds"])
 
-# 공통 제외 키워드 (주식 관련)
-STOCK_EXCLUDE = ["주가", "주식", "특징주", "테마주", "매수", "매도",
-                 "배당", "고배당", "시가총액", "코스피", "코스닥", "종목"]
+with tab1:
+    st.subheader("📰 카테고리별 TOP 3")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown("**🚢 해운시황**")
+        for i, a in enumerate(shipping_news[:3], 1):
+            st.markdown(f"{i}. [{a['title']}]({a['link']})")
+    with col2:
+        st.markdown("**🛢️ 국제유가**")
+        for i, a in enumerate(oil_news[:3], 1):
+            st.markdown(f"{i}. [{a['title']}]({a['link']})")
+    with col3:
+        st.markdown("**🔥 LNG**")
+        for i, a in enumerate(lng_news[:3], 1):
+            st.markdown(f"{i}. [{a['title']}]({a['link']})")
+    with col4:
+        st.markdown("**🌊 TradeWinds**")
+        for i, a in enumerate(tradewinds_news[:3], 1):
+            st.markdown(f"{i}. [{a['title']}]({a['link']})")
 
-def fetch_shipping_news():
-    queries = ["해운", "해운시황", "BDI", "해운 물동량", "벌크선", "해운 선사", "벙커링", "케이프사이즈", "capesize", "수에즈운하", "파나마운하"]
-    all_articles = []
-    for q in queries:
-        all_articles.extend(fetch_google_news(q, num_results=5))
+with tab2:
+    st.header("📌 해운시황 주요 헤드라인")
+    for i, a in enumerate(shipping_news[:5], 1):
+        st.markdown(f"{i}. {a['title']} — *{a['source']}*")
+    st.divider()
+    st.header("📰 전체 뉴스")
+    for a in shipping_news:
+        st.markdown(f"#### [{a['title']}]({a['link']})")
+        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
+        st.divider()
 
-    exclude = STOCK_EXCLUDE + ["컨테이너", "컨테이너선", "컨테이너 운임", "SCFI", "CCFI", "KCCI",
-                                "샴푸", "화장품", "문화유산", "선사시대", "국악", "동아리",
-                                "머릿결", "옥천", "가락"]
-    all_articles = _filter_articles(all_articles, exclude_keywords=exclude)
+with tab3:
+    st.header("📌 국제유가 주요 헤드라인")
+    for i, a in enumerate(oil_news[:5], 1):
+        st.markdown(f"{i}. {a['title']} — *{a['source']}*")
+    st.divider()
+    st.header("📰 전체 뉴스")
+    for a in oil_news:
+        st.markdown(f"#### [{a['title']}]({a['link']})")
+        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
+        st.divider()
 
-    return _deduplicate(all_articles)
+with tab4:
+    st.header("📌 LNG 시장 주요 헤드라인")
+    for i, a in enumerate(lng_news[:5], 1):
+        st.markdown(f"{i}. {a['title']} — *{a['source']}*")
+    st.divider()
+    st.header("📰 전체 뉴스")
+    for a in lng_news:
+        st.markdown(f"#### [{a['title']}]({a['link']})")
+        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
+        st.divider()
 
-def fetch_tradewinds_news():
-    queries = ["site:tradewindsnews.com shipping", "site:tradewindsnews.com tanker", "site:tradewindsnews.com bulker"]
-    all_articles = []
-    for q in queries:
-        all_articles.extend(fetch_google_news_en(q, num_results=10))
-    return _deduplicate(all_articles, max_count=15)
+with tab5:
+    st.header("📌 TradeWinds 주요 헤드라인")
+    for i, a in enumerate(tradewinds_news[:5], 1):
+        st.markdown(f"{i}. {a['title']} — *{a['source']}*")
+    st.divider()
+    st.header("📰 전체 뉴스")
+    for a in tradewinds_news:
+        st.markdown(f"#### [{a['title']}]({a['link']})")
+        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
+        st.divider()
+    st.info("💡 기사 클릭 시 TradeWinds 계정으로 로그인하면 전문을 읽을 수 있습니다.")
 
-def fetch_lng_news():
-    queries = ["LNG", "LNG 가격", "천연가스", "LNG선", "LNG 수입"]
-    all_articles = []
-    for q in queries:
-        all_articles.extend(fetch_google_news(q, num_results=5))
-
-    all_articles = _filter_articles(all_articles, exclude_keywords=STOCK_EXCLUDE)
-
-    return _deduplicate(all_articles)
-
-def fetch_oil_news():
-    queries = ["국제유가", "유가", "WTI", "브렌트유", "OPEC", "원유"]
-    all_articles = []
-    for q in queries:
-        all_articles.extend(fetch_google_news(q, num_results=5))
-
-    all_articles = _filter_articles(all_articles, exclude_keywords=STOCK_EXCLUDE)
-
-    return _deduplicate(all_articles)
+with st.sidebar:
+    st.header("⚙️ 설정")
+    if st.button("🔄 수동 새로고침", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+    st.divider()
+    st.success("✅ 자동 갱신 활성화")
+    st.caption(f"• 뉴스: {REFRESH_INTERVAL_MINUTES}분 간격")
