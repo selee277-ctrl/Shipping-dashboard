@@ -25,6 +25,27 @@ def fetch_google_news(query, num_results=10):
         })
     return articles
 
+def fetch_google_news_en(query, num_results=10):
+    encoded_query = urllib.parse.quote(query)
+    url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en&gl=US&ceid=US:en"
+    feed = feedparser.parse(url)
+    articles = []
+    for entry in feed.entries[:num_results]:
+        pub_parsed = entry.get("published_parsed")
+        if pub_parsed:
+            pub_dt_str = datetime.fromtimestamp(mktime(pub_parsed)).strftime("%Y%m%d%H%M%S")
+        else:
+            pub_dt_str = "00000000000000"
+
+        articles.append({
+            "title": entry.get("title", ""),
+            "link": entry.get("link", ""),
+            "published": entry.get("published", ""),
+            "sort_key": pub_dt_str,
+            "source": entry.get("source", {}).get("title", ""),
+        })
+    return articles
+
 def _is_similar(title1, title2, threshold=0.45):
     """두 제목이 유사한지 판단"""
     t1 = title1.split(" - ")[0].strip()
@@ -64,15 +85,24 @@ STOCK_EXCLUDE = ["주가", "주식", "특징주", "테마주", "매수", "매도
                  "배당", "고배당", "시가총액", "코스피", "코스닥", "종목"]
 
 def fetch_shipping_news():
-    queries = ["해운", "해운시황", "BDI", "해운 물동량", "벌크선", "해운 선사", "벙커링선", "케이프사이즈", "capesize", "수에즈운하", "파나마운하"]
+    queries = ["해운", "해운시황", "BDI", "해운 물동량", "벌크선", "해운 선사", "벙커링", "케이프사이즈", "capesize", "수에즈운하", "파나마운하"]
     all_articles = []
     for q in queries:
         all_articles.extend(fetch_google_news(q, num_results=5))
 
-    exclude = STOCK_EXCLUDE + ["컨테이너", "컨테이너선", "컨테이너 운임", "SCFI", "CCFI", "KCCI"]
+    exclude = STOCK_EXCLUDE + ["컨테이너", "컨테이너선", "컨테이너 운임", "SCFI", "CCFI", "KCCI",
+                                "샴푸", "화장품", "문화유산", "선사시대", "국악", "동아리",
+                                "머릿결", "옥천", "가락"]
     all_articles = _filter_articles(all_articles, exclude_keywords=exclude)
 
     return _deduplicate(all_articles)
+
+def fetch_tradewinds_news():
+    queries = ["site:tradewindsnews.com shipping", "site:tradewindsnews.com tanker", "site:tradewindsnews.com bulker"]
+    all_articles = []
+    for q in queries:
+        all_articles.extend(fetch_google_news_en(q, num_results=10))
+    return _deduplicate(all_articles, max_count=15)
 
 def fetch_lng_news():
     queries = ["LNG", "LNG 가격", "천연가스", "LNG선", "LNG 수입"]
