@@ -31,20 +31,21 @@ tab1, tab2, tab3, tab4 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ �
 INITIAL_SHOW = 10
 
 with tab1:
-    st.subheader("📰 카테고리별 TOP 3")
+    st.subheader("📰 카테고리별 TOP 5")
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("**🚢 해운시황**")
-        for i, a in enumerate(shipping_news[:3], 1):
+        for i, a in enumerate(shipping_news[:5], 1):
             st.markdown(f"{i}. [{a['title']}]({a['link']})")
     with col2:
         st.markdown("**🛢️ 국제유가**")
-        for i, a in enumerate(oil_news[:3], 1):
+        for i, a in enumerate(oil_news[:5], 1):
             st.markdown(f"{i}. [{a['title']}]({a['link']})")
     with col3:
         st.markdown("**🔥 LNG**")
-        for i, a in enumerate(lng_news[:3], 1):
+        for i, a in enumerate(lng_news[:5], 1):
             st.markdown(f"{i}. [{a['title']}]({a['link']})")
+
 
 with tab2:
     st.header("📌 해운시황 주요 헤드라인")
