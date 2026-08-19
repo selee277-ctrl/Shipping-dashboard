@@ -64,7 +64,7 @@ STOCK_EXCLUDE = ["주가", "주식", "특징주", "테마주", "매수", "매도
                  "배당", "고배당", "시가총액", "코스피", "코스닥", "종목"]
 
 def fetch_shipping_news():
-    queries = ["해운", "해운시황", "BDI", "해운 물동량", "벌크선", "선사", "벙커링선", "케이프사이즈", "capesize", "수에즈운하", "파나마운하"]
+    queries = ["해운", "해운시황", "BDI", "해운 물동량", "벌크선", "해운 선사", "벙커링선", "케이프사이즈", "capesize", "수에즈운하", "파나마운하"]
     all_articles = []
     for q in queries:
         all_articles.extend(fetch_google_news(q, num_results=5))
