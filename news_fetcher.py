@@ -1,8 +1,10 @@
 import feedparser
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from time import mktime
 from difflib import SequenceMatcher
+
+KST = timezone(timedelta(hours=9))
 
 def fetch_google_news(query, num_results=10):
     encoded_query = urllib.parse.quote(query)
@@ -12,14 +14,18 @@ def fetch_google_news(query, num_results=10):
     for entry in feed.entries[:num_results]:
         pub_parsed = entry.get("published_parsed")
         if pub_parsed:
-            pub_dt_str = datetime.fromtimestamp(mktime(pub_parsed)).strftime("%Y%m%d%H%M%S")
+            pub_dt = datetime.fromtimestamp(mktime(pub_parsed), tz=timezone.utc)
+            pub_kst = pub_dt.astimezone(KST)
+            pub_dt_str = pub_kst.strftime("%Y%m%d%H%M%S")
+            pub_display = pub_kst.strftime("%Y-%m-%d %H:%M")
         else:
             pub_dt_str = "00000000000000"
+            pub_display = ""
 
         articles.append({
             "title": entry.get("title", ""),
             "link": entry.get("link", ""),
-            "published": entry.get("published", ""),
+            "published": pub_display,
             "sort_key": pub_dt_str,
             "source": entry.get("source", {}).get("title", ""),
         })
