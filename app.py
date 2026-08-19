@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime, timezone, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from news_fetcher import fetch_shipping_news, fetch_lng_news, fetch_oil_news, fetch_tradewinds_news
+from news_fetcher import fetch_shipping_news, fetch_lng_news, fetch_oil_news
 from config import CACHE_TTL_SECONDS, REFRESH_INTERVAL_MINUTES
 
 KST = timezone(timedelta(hours=9))
@@ -17,19 +17,19 @@ if "scheduler_started" not in st.session_state:
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS)
 def load_news():
-    return fetch_shipping_news(), fetch_lng_news(), fetch_oil_news(), fetch_tradewinds_news()
+    return fetch_shipping_news(), fetch_lng_news(), fetch_oil_news()
 
 st.title("🚢 해운·에너지 뉴스 대시보드")
 st.caption(f"📅 {datetime.now(KST).strftime('%Y년 %m월 %d일 %H:%M')} 기준 | ⏰ {REFRESH_INTERVAL_MINUTES}분 자동 갱신")
 
 with st.spinner("📡 최신 데이터를 불러오는 중..."):
-    shipping_news, lng_news, oil_news, tradewinds_news = load_news()
+    shipping_news, lng_news, oil_news = load_news()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ 국제유가", "🔥 LNG", "🌊 TradeWinds"])
+tab1, tab2, tab3, tab4 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ 국제유가", "🔥 LNG"])
 
 with tab1:
     st.subheader("📰 카테고리별 TOP 3")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown("**🚢 해운시황**")
         for i, a in enumerate(shipping_news[:3], 1):
@@ -42,10 +42,6 @@ with tab1:
         st.markdown("**🔥 LNG**")
         for i, a in enumerate(lng_news[:3], 1):
             st.markdown(f"{i}. [{a['title']}]({a['link']})")
-    with col4:
-        st.markdown("**🌊 TradeWinds**")
-        for i, a in enumerate(tradewinds_news[:3], 1):
-            st.markdown(f"{i}. [{a.get('title_kr', a['title'])}]({a['link']})")
 
 with tab2:
     st.header("📌 해운시황 주요 헤드라인")
@@ -79,19 +75,6 @@ with tab4:
         st.markdown(f"#### [{a['title']}]({a['link']})")
         st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
         st.divider()
-
-with tab5:
-    st.header("📌 TradeWinds 주요 헤드라인")
-    for i, a in enumerate(tradewinds_news[:5], 1):
-        st.markdown(f"{i}. {a.get('title_kr', a['title'])} — *{a['source']}*")
-    st.divider()
-    st.header("📰 전체 뉴스")
-    for a in tradewinds_news:
-        st.markdown(f"#### [{a.get('title_kr', a['title'])}]({a['link']})")
-        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
-        st.caption(f"🔤 원문: {a['title']}")
-        st.divider()
-    st.info("💡 기사 클릭 시 TradeWinds 계정으로 로그인하면 전문을 읽을 수 있습니다.")
 
 with st.sidebar:
     st.header("⚙️ 설정")
