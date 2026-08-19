@@ -3,6 +3,7 @@ import urllib.parse
 from datetime import datetime
 from time import mktime
 from difflib import SequenceMatcher
+from deep_translator import GoogleTranslator
 
 def fetch_google_news(query, num_results=10):
     encoded_query = urllib.parse.quote(query)
@@ -45,6 +46,22 @@ def fetch_google_news_en(query, num_results=10):
             "source": entry.get("source", {}).get("title", ""),
         })
     return articles
+
+def _translate_title(title):
+    """영문 제목을 한국어로 번역"""
+    try:
+        # 출처 부분 분리 (- TradeWinds 등)
+        parts = title.rsplit(" - ", 1)
+        main_title = parts[0]
+        source = parts[1] if len(parts) > 1 else ""
+
+        translated = GoogleTranslator(source='en', target='ko').translate(main_title)
+
+        if source:
+            return f"{translated} - {source}"
+        return translated
+    except:
+        return title
 
 def _is_similar(title1, title2, threshold=0.45):
     """두 제목이 유사한지 판단"""
@@ -102,7 +119,15 @@ def fetch_tradewinds_news():
     all_articles = []
     for q in queries:
         all_articles.extend(fetch_google_news_en(q, num_results=10))
-    return _deduplicate(all_articles, max_count=15)
+
+    # 중복 제거 후 번역
+    unique_articles = _deduplicate(all_articles, max_count=15)
+
+    # 제목 번역
+    for a in unique_articles:
+        a["title_kr"] = _translate_title(a["title"])
+
+    return unique_articles
 
 def fetch_lng_news():
     queries = ["LNG", "LNG 가격", "천연가스", "LNG선", "LNG 수입"]
