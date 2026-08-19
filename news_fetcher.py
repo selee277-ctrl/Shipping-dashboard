@@ -1,5 +1,7 @@
 import feedparser
 import urllib.parse
+from datetime import datetime
+from time import mktime
 
 def fetch_google_news(query, num_results=10):
     encoded_query = urllib.parse.quote(query)
@@ -7,10 +9,17 @@ def fetch_google_news(query, num_results=10):
     feed = feedparser.parse(url)
     articles = []
     for entry in feed.entries[:num_results]:
+        pub_parsed = entry.get("published_parsed")
+        if pub_parsed:
+            pub_dt_str = datetime.fromtimestamp(mktime(pub_parsed)).strftime("%Y%m%d%H%M%S")
+        else:
+            pub_dt_str = "00000000000000"
+
         articles.append({
             "title": entry.get("title", ""),
             "link": entry.get("link", ""),
             "published": entry.get("published", ""),
+            "sort_key": pub_dt_str,
             "source": entry.get("source", {}).get("title", ""),
         })
     return articles
@@ -22,6 +31,7 @@ def _deduplicate(articles, max_count=15):
         if a["title"] not in seen:
             seen.add(a["title"])
             unique.append(a)
+    unique.sort(key=lambda x: x["sort_key"], reverse=True)
     return unique[:max_count]
 
 def fetch_shipping_news():
