@@ -45,7 +45,7 @@ with tab1:
     with col4:
         st.markdown("**🌊 TradeWinds**")
         for i, a in enumerate(tradewinds_news[:3], 1):
-            st.markdown(f"{i}. [{a['title']}]({a['link']})")
+            st.markdown(f"{i}. [{a.get('title_kr', a['title'])}]({a['link']})")
 
 with tab2:
     st.header("📌 해운시황 주요 헤드라인")
@@ -83,12 +83,13 @@ with tab4:
 with tab5:
     st.header("📌 TradeWinds 주요 헤드라인")
     for i, a in enumerate(tradewinds_news[:5], 1):
-        st.markdown(f"{i}. {a['title']} — *{a['source']}*")
+        st.markdown(f"{i}. {a.get('title_kr', a['title'])} — *{a['source']}*")
     st.divider()
     st.header("📰 전체 뉴스")
     for a in tradewinds_news:
-        st.markdown(f"#### [{a['title']}]({a['link']})")
+        st.markdown(f"#### [{a.get('title_kr', a['title'])}]({a['link']})")
         st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
+        st.caption(f"🔤 원문: {a['title']}")
         st.divider()
     st.info("💡 기사 클릭 시 TradeWinds 계정으로 로그인하면 전문을 읽을 수 있습니다.")
 
