@@ -6,8 +6,8 @@ from difflib import SequenceMatcher
 
 KST = timezone(timedelta(hours=9))
 
-def fetch_google_news(query, num_results=10):
-    encoded_query = urllib.parse.quote(query)
+def fetch_google_news(query, num_results=30, when="30d"):
+    encoded_query = urllib.parse.quote(f"{query} when:{when}")
     url = f"https://news.google.com/rss/search?q={encoded_query}&hl=ko&gl=KR&ceid=KR:ko"
     feed = feedparser.parse(url)
     articles = []
@@ -48,7 +48,7 @@ def _filter_articles(articles, exclude_keywords=None):
             filtered.append(a)
     return filtered
 
-def _deduplicate(articles, max_count=15):
+def _deduplicate(articles, max_count=50):
     seen_titles = []
     unique = []
     for a in articles:
@@ -73,29 +73,29 @@ def fetch_shipping_news():
     queries = ["해운", "해운시황", "BDI", "해운 물동량", "벌크선", "해운 선사", "벙커링선", "케이프사이즈", "capesize", "수에즈운하", "파나마운하"]
     all_articles = []
     for q in queries:
-        all_articles.extend(fetch_google_news(q, num_results=5))
+        all_articles.extend(fetch_google_news(q, num_results=20))
 
     exclude = STOCK_EXCLUDE + ["컨테이너", "컨테이너선", "컨테이너 운임", "SCFI", "CCFI", "KCCI"]
     all_articles = _filter_articles(all_articles, exclude_keywords=exclude)
 
-    return _deduplicate(all_articles)
+    return _deduplicate(all_articles, max_count=50)
 
 def fetch_lng_news():
     queries = ["LNG", "LNG 가격", "천연가스", "LNG선", "LNG 수입"]
     all_articles = []
     for q in queries:
-        all_articles.extend(fetch_google_news(q, num_results=5))
+        all_articles.extend(fetch_google_news(q, num_results=20))
 
     all_articles = _filter_articles(all_articles, exclude_keywords=STOCK_EXCLUDE)
 
-    return _deduplicate(all_articles)
+    return _deduplicate(all_articles, max_count=50)
 
 def fetch_oil_news():
     queries = ["국제유가", "유가", "WTI", "브렌트유", "OPEC", "원유"]
     all_articles = []
     for q in queries:
-        all_articles.extend(fetch_google_news(q, num_results=5))
+        all_articles.extend(fetch_google_news(q, num_results=20))
 
     all_articles = _filter_articles(all_articles, exclude_keywords=STOCK_EXCLUDE)
 
-    return _deduplicate(all_articles)
+    return _deduplicate(all_articles, max_count=50)
