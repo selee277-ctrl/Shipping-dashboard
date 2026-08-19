@@ -27,6 +27,9 @@ with st.spinner("📡 최신 데이터를 불러오는 중..."):
 
 tab1, tab2, tab3, tab4 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ 국제유가", "🔥 LNG"])
 
+# 기본 표시 개수
+INITIAL_SHOW = 10
+
 with tab1:
     st.subheader("📰 카테고리별 TOP 3")
     col1, col2, col3 = st.columns(3)
@@ -49,10 +52,22 @@ with tab2:
         st.markdown(f"{i}. {a['title']} — *{a['source']}*")
     st.divider()
     st.header("📰 전체 뉴스")
-    for a in shipping_news:
+
+    # 더보기 기능
+    if "shipping_show_all" not in st.session_state:
+        st.session_state.shipping_show_all = False
+
+    show_list = shipping_news if st.session_state.shipping_show_all else shipping_news[:INITIAL_SHOW]
+
+    for a in show_list:
         st.markdown(f"#### [{a['title']}]({a['link']})")
         st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
         st.divider()
+
+    if not st.session_state.shipping_show_all and len(shipping_news) > INITIAL_SHOW:
+        if st.button(f"📄 더보기 ({len(shipping_news) - INITIAL_SHOW}건 더)", key="shipping_more"):
+            st.session_state.shipping_show_all = True
+            st.rerun()
 
 with tab3:
     st.header("📌 국제유가 주요 헤드라인")
@@ -60,10 +75,21 @@ with tab3:
         st.markdown(f"{i}. {a['title']} — *{a['source']}*")
     st.divider()
     st.header("📰 전체 뉴스")
-    for a in oil_news:
+
+    if "oil_show_all" not in st.session_state:
+        st.session_state.oil_show_all = False
+
+    show_list = oil_news if st.session_state.oil_show_all else oil_news[:INITIAL_SHOW]
+
+    for a in show_list:
         st.markdown(f"#### [{a['title']}]({a['link']})")
         st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
         st.divider()
+
+    if not st.session_state.oil_show_all and len(oil_news) > INITIAL_SHOW:
+        if st.button(f"📄 더보기 ({len(oil_news) - INITIAL_SHOW}건 더)", key="oil_more"):
+            st.session_state.oil_show_all = True
+            st.rerun()
 
 with tab4:
     st.header("📌 LNG 시장 주요 헤드라인")
@@ -71,15 +97,29 @@ with tab4:
         st.markdown(f"{i}. {a['title']} — *{a['source']}*")
     st.divider()
     st.header("📰 전체 뉴스")
-    for a in lng_news:
+
+    if "lng_show_all" not in st.session_state:
+        st.session_state.lng_show_all = False
+
+    show_list = lng_news if st.session_state.lng_show_all else lng_news[:INITIAL_SHOW]
+
+    for a in show_list:
         st.markdown(f"#### [{a['title']}]({a['link']})")
         st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
         st.divider()
+
+    if not st.session_state.lng_show_all and len(lng_news) > INITIAL_SHOW:
+        if st.button(f"📄 더보기 ({len(lng_news) - INITIAL_SHOW}건 더)", key="lng_more"):
+            st.session_state.lng_show_all = True
+            st.rerun()
 
 with st.sidebar:
     st.header("⚙️ 설정")
     if st.button("🔄 수동 새로고침", use_container_width=True):
         st.cache_data.clear()
+        st.session_state.shipping_show_all = False
+        st.session_state.oil_show_all = False
+        st.session_state.lng_show_all = False
         st.rerun()
     st.divider()
     st.success("✅ 자동 갱신 활성화")
