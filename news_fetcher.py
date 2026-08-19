@@ -2,6 +2,7 @@ import feedparser
 import urllib.parse
 from datetime import datetime
 from time import mktime
+from difflib import SequenceMatcher
 
 def fetch_google_news(query, num_results=10):
     encoded_query = urllib.parse.quote(query)
@@ -24,6 +25,13 @@ def fetch_google_news(query, num_results=10):
         })
     return articles
 
+def _is_similar(title1, title2, threshold=0.45):
+    """두 제목이 유사한지 판단"""
+    # 출처 부분 제거 (- 뒤의 언론사명)
+    t1 = title1.split(" - ")[0].strip()
+    t2 = title2.split(" - ")[0].strip()
+    return SequenceMatcher(None, t1, t2).ratio() > threshold
+
 def _filter_articles(articles, exclude_keywords=None):
     """제외 키워드가 제목에 포함된 기사를 필터링"""
     if not exclude_keywords:
@@ -36,11 +44,20 @@ def _filter_articles(articles, exclude_keywords=None):
     return filtered
 
 def _deduplicate(articles, max_count=15):
-    seen = set()
+    seen_titles = []
     unique = []
     for a in articles:
-        if a["title"] not in seen:
-            seen.add(a["title"])
+        # 완전 동일 제목 제거
+        if a["title"] in [t for t in seen_titles]:
+            continue
+        # 유사 제목 제거
+        is_dup = False
+        for existing_title in seen_titles:
+            if _is_similar(a["title"], existing_title):
+                is_dup = True
+                break
+        if not is_dup:
+            seen_titles.append(a["title"])
             unique.append(a)
     unique.sort(key=lambda x: x["sort_key"], reverse=True)
     return unique[:max_count]
@@ -51,8 +68,7 @@ def fetch_shipping_news():
     for q in queries:
         all_articles.extend(fetch_google_news(q, num_results=5))
 
-    # 주식/컨테이너 관련 제외
-    exclude = ["주가", "주식", "특징주", "테마주", "매수", "매도",
+    exclude = ["주가", "주식", "특징주", "테마주", "급등", "급락", "매수", "매도",
                "배당", "고배당", "시가총액", "코스피", "코스닥", "종목",
                "컨테이너", "컨테이너선", "컨테이너 운임", "SCFI", "CCFI", "KCCI"]
     all_articles = _filter_articles(all_articles, exclude_keywords=exclude)
