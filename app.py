@@ -23,11 +23,6 @@ st.caption(f"📅 {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')} 기준 | 
 with st.spinner("📡 최신 데이터를 불러오는 중..."):
     shipping_news, lng_news, oil_news = load_news()
 
-# ===== 디버깅용 (확인 후 삭제) =====
-st.write("### 디버깅: sort_key 확인")
-for a in shipping_news[:5]:
-    st.write(f"{a['published']} → sort_key: {a.get('sort_key', 'MISSING')}")
-# ===== 디버깅 끝 =====
 
 tab1, tab2, tab3, tab4 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ 국제유가", "🔥 LNG"])
 
