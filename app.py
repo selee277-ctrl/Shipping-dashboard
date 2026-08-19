@@ -5,7 +5,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from news_fetcher import fetch_shipping_news, fetch_lng_news, fetch_oil_news
 from config import CACHE_TTL_SECONDS, REFRESH_INTERVAL_MINUTES
 
-st.set_page_config(page_title="해운·에너지 대시보드", page_icon="🚢", layout="wide")
+st.set_page_config(page_title="해운·에너지 대시보드", page_icon=":ship:", layout="wide")
 
 if "scheduler_started" not in st.session_state:
     scheduler = BackgroundScheduler()
@@ -22,6 +22,12 @@ st.caption(f"📅 {datetime.now().strftime('%Y년 %m월 %d일 %H:%M')} 기준 | 
 
 with st.spinner("📡 최신 데이터를 불러오는 중..."):
     shipping_news, lng_news, oil_news = load_news()
+
+# ===== 디버깅용 (확인 후 삭제) =====
+st.write("### 디버깅: 정렬 확인")
+for a in shipping_news[:5]:
+    st.write(f"{a['published']} → published_dt: {a.get('published_dt', 'MISSING')}")
+# ===== 디버깅 끝 =====
 
 tab1, tab2, tab3, tab4 = st.tabs(["📋 요약", "🚢 해운시황", "🛢️ 국제유가", "🔥 LNG"])
 
@@ -49,7 +55,7 @@ with tab2:
     st.header("📰 전체 뉴스")
     for a in shipping_news:
         st.markdown(f"#### [{a['title']}]({a['link']})")
-        st.caption(f"📰 {a['source']} | 🕐 {a['published']}")
+        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
         st.divider()
 
 with tab3:
@@ -60,7 +66,7 @@ with tab3:
     st.header("📰 전체 뉴스")
     for a in oil_news:
         st.markdown(f"#### [{a['title']}]({a['link']})")
-        st.caption(f"📰 {a['source']} | 🕐 {a['published']}")
+        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
         st.divider()
 
 with tab4:
@@ -71,7 +77,7 @@ with tab4:
     st.header("📰 전체 뉴스")
     for a in lng_news:
         st.markdown(f"#### [{a['title']}]({a['link']})")
-        st.caption(f"📰 {a['source']} | 🕐 {a['published']}")
+        st.caption(f"📰 {a['source']} | 🕔 {a['published']}")
         st.divider()
 
 with st.sidebar:
